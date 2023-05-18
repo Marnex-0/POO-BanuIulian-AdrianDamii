@@ -1,120 +1,87 @@
 #include "pch.h";
-
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
+#define write(x) Console::WriteLine(x)
 
 using namespace System::IO;
 using namespace System;
 
-
-void AddLineToFile(const std::string& fileName, const std::string& line)
+void VerifyCreateFile(String^ fileName)
 {
-    // Open the file in append mode
-    std::ofstream outputFile;
-    outputFile.open(fileName, std::ios::app);
-
-    if (!outputFile) {
-        std::cout << "Failed to open the file." << std::endl;
-        return;
-    }
-
-    // Write the new line to the file
-    outputFile << line << std::endl;
-
-    // Close the file
-    outputFile.close();
-
-    std::cout << "Task added Successfully!" << std::endl;
-}
-
-void DeleteLineInFile(const std::string& fileName, int lineNumber, std::string& deletedContent) {
-    // Open the original file for reading
-    std::ifstream inputFile(fileName);
-    if (!inputFile) {
-        std::cout << "Failed to open the file." << std::endl;
-        return;
-    }
-
-    std::string line;
-    int currentLine = 1;
-    std::vector<std::string> lines;
-
-    // Read each line from the original file
-    while (std::getline(inputFile, line)) {
-        // Store the line content except the line to be deleted
-        if (currentLine != lineNumber) {
-            lines.push_back(line);
-        }
-        else {
-            deletedContent = line;
-        }
-        currentLine++;
-    }
-
-    // Close the file
-    inputFile.close();
-
-    // Open the file for writing
-    std::ofstream outputFile(fileName);
-    if (!outputFile) {
-        std::cout << "Failed to open the file for writing." << std::endl;
-        return;
-    }
-
-    // Write the modified content to the file
-    for (const auto& line : lines)
-    {
-        outputFile << line << std::endl;
-    }
-
-    // Close the file
-    outputFile.close();
-    std::cout << "Line " << lineNumber << " deleted from the file." << std::endl;
-}
-
-
-void VerifyAndCreateFile()
-{
-    String^ fileName = "file.txt";
-    String^ filePath = Path::Combine(Environment::CurrentDirectory, fileName);
+    String^ filePath = fileName;
 
     try
     {
-        // Check if the file exists
-        if (File::Exists(filePath))
+        if (!File::Exists(filePath))
         {
-            Console::WriteLine("File already exists.");
-        }
-        else
-        {
-            throw gcnew FileNotFoundException("The file is deleted or is in another directory!");
+            throw gcnew FileNotFoundException("The file does not exist or cannot be found, make sure the file is in the same directory as the program");
         }
     }
     catch (FileNotFoundException^ ex)
     {
-        Console::WriteLine("An error occurred: {0}", ex->Message);
-        Console::WriteLine("Do you want to create a new file with the same name? (Y/N)");
+        write("Do you want to create a new TASKSFILE ? (Y/N)");
 
         String^ response = Console::ReadLine();
         if (response->ToUpper() == "Y")
         {
             try
             {
-                // Create a new file
                 FileStream^ fileStream = File::Create(filePath);
                 fileStream->Close();
-                Console::WriteLine("File created successfully.");
+                write("File created successfully.");
             }
             catch (Exception^ ex)
             {
-                Console::WriteLine("An error occurred while creating the file: {0}", ex->Message);
+                write("An error occurred while creating the file: ", ex->Message);
             }
+        }
+        else write("The file has not been created.");
+    }
+
+    catch (Exception^ ex)
+    {
+        write("An error occurred: ", ex->Message);
+    }
+}
+
+void AddLine(String^ filePath, String^ line)
+{
+    try
+    {
+
+        StreamWriter^ writer = gcnew StreamWriter(filePath, true);
+
+        writer->WriteLine(line);
+
+        writer->Close();
+
+        write("Task added to TASKSFILE");
+    }
+    catch (Exception^ ex)
+    {
+        write("Error: ", ex->Message);
+    }
+}
+
+void DeleteLine(String^ filePath, int lineNumber)
+{
+    try
+    {
+        array<String^>^ lines = File::ReadAllLines(filePath);
+
+        if (lineNumber > 0 && lineNumber <= lines->Length)
+        {
+            lines->SetValue("", lineNumber - 1);
+
+            File::WriteAllLines(filePath, lines);
+
+            write("Line "+ lineNumber +" deleted from file.");
+        }
+        else
+        {
+            write("Invalid line number.");
         }
     }
     catch (Exception^ ex)
     {
-        Console::WriteLine("An error occurred: {0}", ex->Message);
+        write("Deletion Error: ", ex->Message);
     }
 }
