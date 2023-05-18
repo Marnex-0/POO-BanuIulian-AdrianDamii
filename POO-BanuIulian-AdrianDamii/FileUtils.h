@@ -8,6 +8,27 @@
 using namespace System::IO;
 using namespace System;
 
+
+void AddLineToFile(const std::string& fileName, const std::string& line)
+{
+    // Open the file in append mode
+    std::ofstream outputFile;
+    outputFile.open(fileName, std::ios::app);
+
+    if (!outputFile) {
+        std::cout << "Failed to open the file." << std::endl;
+        return;
+    }
+
+    // Write the new line to the file
+    outputFile << line << std::endl;
+
+    // Close the file
+    outputFile.close();
+
+    std::cout << "Task added Successfully!" << std::endl;
+}
+
 void DeleteLineInFile(const std::string& fileName, int lineNumber, std::string& deletedContent) {
     // Open the original file for reading
     std::ifstream inputFile(fileName);
