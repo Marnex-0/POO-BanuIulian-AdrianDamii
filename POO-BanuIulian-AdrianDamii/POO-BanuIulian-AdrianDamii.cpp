@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "FileUtils.h"
 
+// Definitions for common code
 #define write(x) Console::WriteLine(x)
 
 #define HLPMSG "List of options:\n help\tshows this page\n list\tlists all the tasks\n add \tadds a task to the TASKSFILE \n delete [Task Number]\tdeletes a task from the TASKSFILE, make sure the [Task Number] is a natural integer different from 0\n complete [Task Number]\tmarks a task as complete, make sure the [Task Number] is a natural integer different from 0\n"
@@ -17,6 +18,7 @@ ref struct Task
     DateTime CreationTime;
     DateTime CompletionTime;
     String^ CompletionStatus;
+
 };
 
 // Function to parse timestamped tasks from a file
@@ -30,8 +32,8 @@ List<Task^>^ ParseTasks(String^ filename)
         String^ line;
 
         // Regex patterns to match timestamps and tasks
-        String^ pattern = "(.+) (\\d{1,2}/\\d{1,2}/\\d{4}) (Pending Completion)";
-        String^ pattern2 = "(.+) (\\d{1,2}/\\d{1,2}/\\d{4}) -> (\\d{1,2}/\\d{1,2}/\\d{4}) (Completed)";
+        String^ pattern = "(.+) (\\d{1,2}/\\d{1,2}/\\d{4} \\d{1,2}:\\d{1,2}:\\d{1,2} [AP]M) (Pending Completion)";
+        String^ pattern2 = "(.+) (\\d{1,2}/\\d{1,2}/\\d{4} \\d{1,2}:\\d{1,2}:\\d{1,2} [AP]M) -> (\\d{1,2}/\\d{1,2}/\\d{4} \\d{1,2}:\\d{1,2}:\\d{1,2} [AP]M) (Completed)";
         Regex^ regex = gcnew Regex(pattern);
         Regex^ regex2 = gcnew Regex(pattern2);
         
@@ -87,46 +89,36 @@ List<Task^>^ ParseTasks(String^ filename)
 }
 
 
-List<Task^>^ CompleteTask(String^ filename, int linenr) {
+void CompleteTask(String^ filename, int linenr) {
 
-    List<Task^>^ text = gcnew List<Task^>();
+    String^ linetxt;
 
-    try
-    {
-        IO::StreamReader^ reader = IO::File::OpenText(filename);
-        String^ line;
-        String^ linestr;
-        int c = 0;
+        try {
+            array<String^>^ alllines = File::ReadAllLines(filename);
 
-        // Regex pattern to take data from specified task
-        String^ pattern = "(.+) (\\d{1,2}/\\d{1,2}/\\d{4})";
-        Regex^ regex = gcnew Regex(pattern);
-        while ((line = reader->ReadLine()) != nullptr) {
-            c++;
-            Match^ match = regex->Match(line);
-            if (c == linenr && match->Success && match->Groups->Count == 3) {
-                String^ TaskText = match->Groups[1]->Value;
-                String^ CreationTime = match->Groups[2]->Value;
-                DateTime timestamp = DateTime::Parse(CreationTime);
-                Task^ txt = gcnew Task();
-                txt->CreationTime = timestamp;
-                txt->CompletionTime = DateTime::Now;
-                txt->TaskText = TaskText;
-                txt->CompletionStatus = "Completed";
+            if (linenr > 0 && linenr <= alllines->Length) {
+                String^ pattern = "(.+) (\\d{1,2}/\\d{1,2}/\\d{4} \\d{1,2}:\\d{1,2}:\\d{1,2} [AP]M)";
+                Regex^ regex = gcnew Regex(pattern);
 
-                text->Add(txt);
-                DeleteLine(filename, linenr);
-                linestr=txt->TaskText + " " + txt->CreationTime + "->" + txt->CompletionTime + " " + txt->CompletionStatus;
-                write(linestr);
-                AddLine(filename, linestr);
+                Match^ match = regex->Match(alllines[linenr - 1]);
+                if (match->Success && match->Groups->Count == 3) {
+                    String^ TaskText = match->Groups[1]->Value;
+                    String^ CreationTime = match->Groups[2]->Value;
+                    DateTime timestamp = DateTime::Parse(CreationTime);
+                    Task^ txt = gcnew Task();
+                    txt->CreationTime = timestamp;
+                    txt->CompletionTime = DateTime::Now;
+                    txt->TaskText = TaskText;
+                    txt->CompletionStatus = "Completed";
+                    linetxt = txt->TaskText + " " + txt->CreationTime + " -> " + txt->CompletionTime + " " + txt->CompletionStatus;
+                    alllines->SetValue(linetxt, linenr - 1);
+                    File::WriteAllLines(filename, alllines);
+                }
             }
         }
-        reader->Close();
-    }
     catch (Exception^ ex) {
         write("Error: " + ex);
     }
-    return text;
 }
 
 void Arguments(array<System::String^>^ args) {
@@ -140,20 +132,17 @@ void Arguments(array<System::String^>^ args) {
         for each (Task ^ txt in task)
         {
             DateTime CDate = txt->CreationTime;
-            String^ BDate = CDate.ToString("d");
             DateTime CDate2 = txt->CompletionTime;
-            String^ BDate2 = CDate2.ToString("d");
             if (txt->CompletionStatus == "Completed")
-                write("Task: \"" + txt->TaskText + "\" \n" + "Timestamp: " + BDate + "->" + BDate2 + ", Completion Status: " + txt->CompletionStatus);
-            else write("Task: \"" + txt->TaskText+ "\" \n" + "Timestamp: " + BDate + ", Completion Status: " + txt->CompletionStatus);
+                write("Task : \" " + txt->TaskText + "\" \n" + "Timestamp: " + txt->CreationTime + " -> " + txt->CompletionTime + ", Completion Status: " + txt->CompletionStatus);
+            else write("Task : \" " + txt->TaskText+ "\" \n" + "Timestamp: " + txt->CreationTime + ", Completion Status: " + txt->CompletionStatus);
         }
     }
-
     else if (args[0] == "add") {
         String^ TaskText;
         write("Describe the task:");
         TaskText = Console::ReadLine();
-        AddLine("TASKSFILE", TaskText + " " + System::DateTime::Now.ToString("d") + " Pending Completion");
+        AddLine("TASKSFILE", TaskText + " " + System::DateTime::Now +" Pending Completion");
     }
 
     else if (args[0] == "delete") {

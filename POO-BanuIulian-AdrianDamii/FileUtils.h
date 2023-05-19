@@ -67,13 +67,13 @@ void DeleteLine(String^ filePath, int lineNumber)
     {
         array<String^>^ lines = File::ReadAllLines(filePath);
 
-        if (lineNumber > 0 && lineNumber <= lines->Length)
+        if (lineNumber > 0 && lineNumber - 1 <= lines->Length)
         {
             lines->SetValue("", lineNumber - 1);
 
             File::WriteAllLines(filePath, lines);
 
-            write("Line "+ lineNumber +" deleted from file.");
+            write("Task "+ lineNumber +" deleted from file.");
         }
         else
         {
